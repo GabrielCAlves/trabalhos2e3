@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">Trabalho2</string>
+    <string name="total">Total:</string>
+    <string name="nome_do_item">Nome do item:</string>
+    <string name="cancelar">Cancelar</string>
+    <string name="pre_o_r">Preço (Unid.):</string>
+    <string name="exemplo_ovo">Exemplo: Ovo</string>
+    <string name="identificador_do_item">Identificador do item</string>
+    <string name="adicionar">Adicionar</string>
+    <string name="editar">Editar</string>
+    <string name="exemplo_omo">Exemplo: Omo</string>
+    <string name="marca">Marca:</string>
+    <string name="exemplo_10">Exemplo: 10</string>
+    <string name="xx_xx">XX.XX</string>
+    <string name="quantidade">Quantidade:</string>
+</resources>
