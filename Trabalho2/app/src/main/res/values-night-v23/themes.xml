@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.Trabalho2" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+        <!-- Cores principais (ajustadas para modo noturno) -->
+        <item name="colorPrimary">@color/bluetheme</item>
+        <item name="colorPrimaryVariant">@color/bluetheme</item>
+        <item name="colorOnPrimary">@color/white</item>
+
+        <!-- Outras configurações do tema noturno... -->
+        <item name="android:statusBarColor">@color/black</item>
+        <item name="android:navigationBarColor">@color/black</item>
+
+        <!-- Configuração para forçar estilo claro no SearchView -->
+        <!--<item name="searchViewStyle">@style/ForceLightSearchView</item>-->
+        <item name="android:searchViewStyle">@style/ForceLightSearchView</item>
+    </style>
+
+    <!-- Estilo que força aparência clara no SearchView -->
+    <style name="ForceLightSearchView" parent="Widget.AppCompat.SearchView">
+        <!-- Cores fixas (ignoram tema noturno) -->
+        <item name="android:textColor">#000000</item>
+        <item name="android:textColorHint">#808080</item>
+        <item name="iconTint">#000000</item>
+        <item name="android:background">@drawable/rounded_branco</item>
+        <item name="android:searchIcon">@drawable/ic_search</item>
+        <item name="android:closeIcon">@drawable/ic_close</item>
+
+        <!-- Garante que o hint seja sempre visível -->
+        <item name="queryHint">Procurar por nome ou marca...</item>
+        <item name="searchHintIcon">@null</item>
+    </style>
+
+    <style name="Theme.Trabalho2.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:searchViewStyle">@style/ForceLightSearchView</item>
+    </style>
+
+    <style name="TextAppearanceEditText" parent="TextAppearance.AppCompat.Widget.ActionBar.Subtitle">
+        <item name="colorAccent">@color/black</item>
+        <item name="android:colorAccent">@color/black</item>
+    </style>
+</resources>

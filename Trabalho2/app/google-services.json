@@ -1,8 +1,9 @@
 {
   "project_info": {
     "project_number": "827465985542",
+    "firebase_url": "https://trabalho2e3-default-rtdb.firebaseio.com",
     "project_id": "trabalho2e3",
-    "storage_bucket": "trabalho2e3.appspot.com"
+    "storage_bucket": "trabalho2e3.firebasestorage.app"
   },
   "client": [
     {
@@ -12,20 +13,7 @@
           "package_name": "br.ufc.quixada.dadm.trabalho2"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "827465985542-bdrcoqk27mknbcm3nl9rt5l926303rm9.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "br.ufc.quixada.dadm.trabalho2",
-            "certificate_hash": "4985ce1e6c7a29aad3d0f008ca821409a9d1ad93"
-          }
-        },
-        {
-          "client_id": "827465985542-7diev1kfinkmjk89f1phflieeccjpjkn.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
           "current_key": "AIzaSyDRPF3TD4E8wjGa6-oRZoLojbe4QywvgOo"
@@ -33,12 +21,7 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "827465985542-7diev1kfinkmjk89f1phflieeccjpjkn.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
+          "other_platform_oauth_client": []
         }
       }
     }

@@ -6,20 +6,26 @@ public class ItensDeFeiraModel {
 
     @Exclude
     private String key;
+    private String userId;
     int id;
+    private String imagemUri;
     String nome;
     String marca;
     int quantidade;
-    double preco;
+    double preco, desconto;
 
     public ItensDeFeiraModel() {}
 
-    public ItensDeFeiraModel(int id, String nome, String marca, int quantidade, double preco) {
+    public ItensDeFeiraModel(int id, String key, String userId, String imagemUri, String nome, String marca, int quantidade, double preco, double desconto) {
         this.id = id;
+        this.key = key;
+        this.userId = userId;
+        this.imagemUri = imagemUri;
         this.nome = nome;
         this.marca = marca;
         this.quantidade = quantidade;
         this.preco = preco;
+        this.desconto = desconto;
     }
 
     public String getKey() {
@@ -37,7 +43,19 @@ public class ItensDeFeiraModel {
     public void setId(int id) {
         this.id = id;
     }
+    public String getUserId() {
+        return userId;
+    }
 
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+    public String getImagemUri() {
+        return imagemUri;
+    }
+    public void setImagemUri(String imagemUri) {
+        this.imagemUri = imagemUri;
+    }
     public String getNome() {
         return nome;
     }
@@ -68,5 +86,13 @@ public class ItensDeFeiraModel {
 
     public void setPreco(double preco) {
         this.preco = preco;
+    }
+
+    public double getDesconto() {
+        return desconto;
+    }
+
+    public void setDesconto(double desconto) {
+        this.desconto = desconto;
     }
 }

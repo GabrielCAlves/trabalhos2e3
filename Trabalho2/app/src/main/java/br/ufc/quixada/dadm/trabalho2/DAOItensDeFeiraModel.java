@@ -11,13 +11,16 @@ import br.ufc.quixada.dadm.trabalho2.Model.ItensDeFeiraModel;
 
 public class DAOItensDeFeiraModel {
     private DatabaseReference databaseReference;
+    private String userId;
 
-    public DAOItensDeFeiraModel(){
+    public DAOItensDeFeiraModel(String userId){
         FirebaseDatabase db = FirebaseDatabase.getInstance();
         databaseReference = db.getReference(ItensDeFeiraModel.class.getSimpleName());
+        this.userId = userId;
     }
 
     public Task<Void> add(ItensDeFeiraModel itensDeFeiraModel){
+        itensDeFeiraModel.setUserId(userId);
         return databaseReference.push().setValue(itensDeFeiraModel);
     }
 
@@ -30,6 +33,6 @@ public class DAOItensDeFeiraModel {
     }
 
     public Query get(){
-        return databaseReference.orderByKey();
+        return databaseReference.orderByChild("userId").equalTo(userId); //databaseReference.orderByKey();
     }
 }

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppTheme.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
+    <!--<style name="AppTheme"></style>-->
+    <!--<style name="AppTheme" parent="Theme.MaterialComponents.DayNight" />-->
+
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Outras configurações -->
+        <!--<item name="searchViewStyle">@style/ForceLightSearchView</item>-->
+        <item name="android:searchViewStyle">@style/ForceLightSearchView</item>
+    </style>
+
+    <style name="CustomSearchViewStyle" parent="Widget.AppCompat.SearchView">
+        <item name="android:editTextColor">@color/black</item>
+        <item name="android:textColorHint">@color/gray</item>
+    </style>
+
+    <style name="Theme.MyApp" parent="Theme.MaterialComponents.Light.DarkActionBar">
+        <!-- Personalizações opcionais -->
+        <item name="colorPrimary">@color/bluetheme</item>
+        <item name="colorPrimaryVariant">@color/bluetheme</item>
+        <item name="colorOnPrimary">@color/black</item>
+    </style>
+
+</resources>

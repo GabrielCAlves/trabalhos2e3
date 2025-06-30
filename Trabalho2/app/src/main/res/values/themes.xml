@@ -1,16 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
+
+    <!-- Base application theme -->
     <style name="Theme.Trabalho2" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
-        <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/purple_700</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <!-- Secondary brand color. -->
+        <!-- Cores principais -->
+        <item name="colorPrimary">@color/bluetheme</item>
+        <item name="colorPrimaryVariant">@color/bluetheme</item>
+        <item name="colorOnPrimary">@color/black</item>
+
+        <!-- Cores secundárias -->
         <item name="colorSecondary">@color/teal_200</item>
         <item name="colorSecondaryVariant">@color/teal_700</item>
         <item name="colorOnSecondary">@color/black</item>
-        <!-- Status bar color. -->
+
+        <!-- Ajustes visuais -->
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-        <!-- Customize your theme here. -->
+
+        <!-- Remoção de tint de botões -->
+        <item name="colorButtonNormal">@android:color/transparent</item>
+        <item name="colorControlHighlight">@android:color/transparent</item>
+        <item name="buttonStyle">@style/NoTintButton</item>
+
+        <!--<item name="searchViewStyle">@style/ForceLightSearchView</item>-->
+        <item name="android:searchViewStyle">@style/ForceLightSearchView</item>
+    </style>
+
+    <!-- Variante sem ActionBar -->
+    <style name="Theme.Trabalho2.NoActionBar" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:statusBarColor">@color/white</item>
+        <item name="android:navigationBarColor">@color/black</item>
+        <item name="android:windowLightStatusBar">true</item>
+
+        <!-- Também aplicar aqui para segurança -->
+        <item name="colorButtonNormal">@android:color/transparent</item>
+        <item name="colorControlHighlight">@android:color/transparent</item>
+        <item name="buttonStyle">@style/NoTintButton</item>
+
+        <item name="android:searchViewStyle">@style/ForceLightSearchView</item>
+    </style>
+
+    <!-- Estilo que força aparência clara no SearchView -->
+    <style name="ForceLightSearchView" parent="Widget.AppCompat.SearchView">
+        <!-- Cores fixas (ignoram tema noturno) -->
+        <item name="android:textColor">@color/black</item>
+        <item name="android:textColorHint">@color/gray</item>
+        <item name="iconTint">@color/black</item>
+        <item name="android:background">@drawable/rounded_branco</item>
+
+        <!-- Garante que o hint seja sempre visível -->
+        <item name="queryHint">Procurar por nome ou marca...</item>
+        <item name="searchHintIcon">@null</item>
+    </style>
+
+    <!-- Estilo de botão sem tint -->
+    <style name="NoTintButton" parent="Widget.MaterialComponents.Button">
+        <item name="android:backgroundTint">@null</item>
+        <item name="backgroundTint">@null</item>
+    </style>
+
+    <!-- Outros estilos do projeto -->
+    <style name="TextAppearanceEditText" parent="TextAppearance.AppCompat.Widget.ActionBar.Subtitle">
+        <item name="colorAccent">@color/black</item>
+        <item name="android:colorAccent">@color/black</item>
+    </style>
+
+    <style name="roundedImageViewRounded">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
     </style>
 </resources>
