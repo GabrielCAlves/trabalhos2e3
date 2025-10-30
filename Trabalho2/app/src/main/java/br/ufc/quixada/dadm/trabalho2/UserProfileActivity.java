@@ -30,6 +30,8 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.drawable.RoundedBitmapDrawable;
+import androidx.core.graphics.drawable.RoundedBitmapDrawableFactory;
 
 import br.ufc.quixada.dadm.trabalho2.databinding.ActivityUserProfileBinding;
 
@@ -149,7 +151,7 @@ public class UserProfileActivity extends AppCompatActivity {
     }
 
     private void getUserProfile() throws IOException {
-        storageReference = FirebaseStorage.getInstance().getReference("Usuario/"+key+".jpg");
+        storageReference = FirebaseStorage.getInstance().getReference("Usuario/" + key + ".jpg");
 
         File localFile = File.createTempFile("tempImage", "jpg");
 
@@ -157,13 +159,17 @@ public class UserProfileActivity extends AppCompatActivity {
             @Override
             public void onSuccess(FileDownloadTask.TaskSnapshot taskSnapshot) {
                 Bitmap bitmap = BitmapFactory.decodeFile(localFile.getAbsolutePath());
-                binding.imageProfile.setImageBitmap(bitmap);
-                binding.imageProfile.setRotation(getCameraPhotoOrientation(localFile.getAbsolutePath()));
+
+                RoundedBitmapDrawable roundedDrawable = RoundedBitmapDrawableFactory.create(getResources(), bitmap);
+                roundedDrawable.setCircular(true);
+                photo.setImageDrawable(roundedDrawable);
+                photo.setRotation(getCameraPhotoOrientation(localFile.getAbsolutePath()));
             }
         }).addOnFailureListener(new OnFailureListener() {
             @Override
             public void onFailure(@NonNull Exception e) {
-                Toast.makeText(UserProfileActivity.this, "Falha em carregar imagem", Toast.LENGTH_SHORT).show();
+                // Define uma imagem padrão quando não há foto
+                Log.d("PerfilFragment", "Usuário sem foto de perfil: " + e.getMessage());
             }
         });
     }
@@ -180,40 +186,38 @@ public class UserProfileActivity extends AppCompatActivity {
     @RequiresApi(api = Build.VERSION_CODES.M)
     public void mudarFoto(View v){
 
-        if(checkAndRequestPermissions(UserProfileActivity.this)){
-            chooseImage(UserProfileActivity.this);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if(checkAndRequestPermissions(UserProfileActivity.this, UserProfileActivity.this)){
+                chooseImage(UserProfileActivity.this);
+            }
         }
 
     }
 
-    public static boolean checkAndRequestPermissions(final Activity context) {
-        /*int WExtstorePermission = ContextCompat.checkSelfPermission(context,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE);*/
-        int cameraPermission = ContextCompat.checkSelfPermission(context,
-                Manifest.permission.CAMERA);
+    @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
+    public static boolean checkAndRequestPermissions(Context context, Activity activity) {
         List<String> listPermissionsNeeded = new ArrayList<>();
-        if (cameraPermission != PackageManager.PERMISSION_GRANTED) {
-            listPermissionsNeeded.add(Manifest.permission.CAMERA);
-        }
-        /*if (WExtstorePermission != PackageManager.PERMISSION_GRANTED) {
-            listPermissionsNeeded
-                    .add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
-        }*/
+
+        // Permissões para Android 13+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            int readImagesPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_IMAGES);
-            if (readImagesPermission != PackageManager.PERMISSION_GRANTED) {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED) {
                 listPermissionsNeeded.add(Manifest.permission.READ_MEDIA_IMAGES);
             }
         } else {
-            int readStoragePermission = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE);
-            if (readStoragePermission != PackageManager.PERMISSION_GRANTED) {
+            // Permissões para versões anteriores
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                 listPermissionsNeeded.add(Manifest.permission.READ_EXTERNAL_STORAGE);
             }
         }
 
+        // Permissão da câmera (sempre necessária)
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            listPermissionsNeeded.add(Manifest.permission.CAMERA);
+        }
+
         if (!listPermissionsNeeded.isEmpty()) {
-            ActivityCompat.requestPermissions(context, listPermissionsNeeded
-                            .toArray(new String[listPermissionsNeeded.size()]),
+            ActivityCompat.requestPermissions(activity,
+                    listPermissionsNeeded.toArray(new String[listPermissionsNeeded.size()]),
                     REQUEST_ID_MULTIPLE_PERMISSIONS);
             return false;
         }
@@ -221,24 +225,22 @@ public class UserProfileActivity extends AppCompatActivity {
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode,String[] permissions, int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        switch (requestCode) {
-            case REQUEST_ID_MULTIPLE_PERMISSIONS:
-                if (ContextCompat.checkSelfPermission(UserProfileActivity.this,
-                        Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(getApplicationContext(),
-                                    "É necessário permição para usar a câmera.", Toast.LENGTH_SHORT)
-                            .show();
-                } else if (ContextCompat.checkSelfPermission(UserProfileActivity.this,
-                        Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(getApplicationContext(),
-                            "É necessário permissão para acessar arquivos.",
-                            Toast.LENGTH_SHORT).show();
-                } else {
-                    chooseImage(UserProfileActivity.this);
+        if (requestCode == REQUEST_ID_MULTIPLE_PERMISSIONS) {
+            boolean allGranted = true;
+            for (int grantResult : grantResults) {
+                if (grantResult != PackageManager.PERMISSION_GRANTED) {
+                    allGranted = false;
+                    break;
                 }
-                break;
+            }
+
+            if (allGranted) {
+                chooseImage(UserProfileActivity.this);
+            } else {
+                Toast.makeText(UserProfileActivity.this, "Permissões necessárias foram negadas", Toast.LENGTH_SHORT).show();
+            }
         }
     }
 
