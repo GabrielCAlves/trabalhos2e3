@@ -16,10 +16,8 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Matrix;
 import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Build;
@@ -31,24 +29,22 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+import com.squareup.picasso.Picasso;
 
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.storage.FileDownloadTask;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
-import com.google.firebase.storage.UploadTask;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import br.ufc.quixada.dadm.trabalho2.databinding.ActivityTelaEdicaoAdicaoBinding;
-import br.ufc.quixada.dadm.trabalho2.databinding.ActivityUserProfileBinding;
+import br.ufc.quixada.dadm.trabalho2.service.ImageUploadService;
 
 public class TelaEdicaoAdicao extends AppCompatActivity {
 
@@ -63,6 +59,8 @@ public class TelaEdicaoAdicao extends AppCompatActivity {
     ImageView campoPhoto;
     ActivityTelaEdicaoAdicaoBinding binding;
     Uri imageUri;
+
+    private ImageUploadService uploadService;
 
     @SuppressLint("DefaultLocale")
     @Override
@@ -80,6 +78,8 @@ public class TelaEdicaoAdicao extends AppCompatActivity {
         campoTotal = findViewById(R.id.textViewTotalValor);
 
         campoPhoto = binding.imageItem;
+
+        uploadService = new ImageUploadService(this);
 
         Bundle extras = getIntent().getExtras();
 
@@ -114,35 +114,35 @@ public class TelaEdicaoAdicao extends AppCompatActivity {
             campoDesconto.setText(String.valueOf(desconto));
             campoTotal.setText(String.format("%.2f",total));
 
-            if(picture == null){
-                try {
-                    getItemImage();
-                } catch (IOException e) {
-                    Toast.makeText(TelaEdicaoAdicao.this, "Item sem imagem ou falha em carregar. No segundo caso, erro: "+e.getMessage(), Toast.LENGTH_SHORT).show();
-                }
-            }
+            loadItemImage();
         }
 
     }
 
-    private void getItemImage() throws IOException {
-        storageReference = FirebaseStorage.getInstance().getReference("Item/"+userId+"/"+key+".jpg");
+    private void loadItemImage() {
+        // Verifica se já temos uma URL da imagem (do ImgBB)
+        if (picture != null && !picture.isEmpty()) {
+            // Usa Picasso para carregar a imagem da URL
+            Picasso.get()
+                    .load(picture)
+                    .placeholder(R.drawable.ic_img_profile) // Imagem enquanto carrega
+                    .error(R.drawable.ic_img_profile) // Imagem se der erro
+                    .into(campoPhoto, new com.squareup.picasso.Callback() {
+                        @Override
+                        public void onSuccess() {
+                            Log.d("TelaEdicao", "Imagem carregada com sucesso: " + picture);
+                        }
 
-        File localFile = File.createTempFile("tempImage", "jpg");
-
-        storageReference.getFile(localFile).addOnSuccessListener(new OnSuccessListener<FileDownloadTask.TaskSnapshot>() {
-            @Override
-            public void onSuccess(FileDownloadTask.TaskSnapshot taskSnapshot) {
-                Bitmap bitmap = BitmapFactory.decodeFile(localFile.getAbsolutePath());
-                campoPhoto.setImageBitmap(bitmap);
-                campoPhoto.setRotation(getCameraPhotoOrientation(localFile.getAbsolutePath()));
-            }
-        }).addOnFailureListener(new OnFailureListener() {
-            @Override
-            public void onFailure(@NonNull Exception e) {
-                Toast.makeText(TelaEdicaoAdicao.this, "Falha em carregar imagem", Toast.LENGTH_SHORT).show();
-            }
-        });
+                        @Override
+                        public void onError(Exception e) {
+                            Log.e("TelaEdicao", "Erro ao carregar imagem: " + e.getMessage());
+                            campoPhoto.setImageResource(R.drawable.ic_img_profile);
+                        }
+                    });
+        } else {
+            // Se não há imagem, usa a padrão
+            campoPhoto.setImageResource(R.drawable.ic_img_profile);
+        }
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)
@@ -240,98 +240,77 @@ public class TelaEdicaoAdicao extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        storageReference = FirebaseStorage.getInstance().getReference("Item/"+userId+"/"+key+".jpg");
-
-        Log.d(String.valueOf(TelaEdicaoAdicao.this), "Data: "+data.getData());
-
         if (resultCode != RESULT_CANCELED) {
             switch (requestCode) {
-                case 0:
+                case 0: // CÂMERA
                     if (resultCode == RESULT_OK && data != null) {
                         Bitmap selectedImage = (Bitmap) data.getExtras().get("data");
 
-                        Matrix mat = new Matrix();
-                        mat.postRotate(0);
+                        // Mostra a imagem imediatamente
+                        campoPhoto.setImageBitmap(selectedImage);
 
-                        Bitmap selectedImageRotate = Bitmap.createBitmap(selectedImage, 0, 0,selectedImage.getWidth(),selectedImage.getHeight(), mat, true);
-
-                        campoPhoto.setImageBitmap(selectedImageRotate);
-
-                        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-                        selectedImage.compress(Bitmap.CompressFormat.JPEG, 90, bytes);
-                        byte bb[] = bytes.toByteArray();
-
-                        storageReference.putBytes(bb).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                        // Faz upload
+                        uploadService.uploadImage(selectedImage, new ImageUploadService.UploadCallback() {
                             @Override
-                            public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                                Toast.makeText(TelaEdicaoAdicao.this, "Imagem salva com sucesso", Toast.LENGTH_SHORT).show();
+                            public void onSuccess(String imageUrl) {
+                                runOnUiThread(() -> {
+                                    Toast.makeText(TelaEdicaoAdicao.this, "Imagem da câmera salva!", Toast.LENGTH_SHORT).show();
+                                    salvarUrlImagemNoFirestore(imageUrl);
+                                });
                             }
-                        }).addOnFailureListener(new OnFailureListener() {
+
                             @Override
-                            public void onFailure(@NonNull Exception e) {
-                                Toast.makeText(TelaEdicaoAdicao.this, "Erro: "+e.getMessage(), Toast.LENGTH_LONG).show();
+                            public void onError(String error) {
+                                runOnUiThread(() -> {
+                                    Toast.makeText(TelaEdicaoAdicao.this, "Erro: " + error, Toast.LENGTH_LONG).show();
+                                });
                             }
                         });
                     }
                     break;
-                case 1:
+
+                case 1: // GALERIA
                     if (resultCode == RESULT_OK && data != null) {
                         Uri selectedImage = data.getData();
-                        //String[] filePathColumn = {MediaStore.Images.Media.DATA};
-                        if (selectedImage != null) {
-                            InputStream inputStream = null;
-                            try {
-                                inputStream = getContentResolver().openInputStream(selectedImage);
-                            } catch (FileNotFoundException e) {
-                                throw new RuntimeException(e);
-                            }
-                            Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
-                            campoPhoto.setImageBitmap(bitmap);
-                            campoPhoto.setRotation(getCameraPhotoOrientation(String.valueOf(selectedImage)));
-                            imageUri = data.getData();
 
-                            storageReference.putFile(imageUri).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
-                                @Override
-                                public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                                    Toast.makeText(TelaEdicaoAdicao.this, "Image salva no banco com sucesso", Toast.LENGTH_SHORT).show();
-                                }
-                            }).addOnFailureListener(new OnFailureListener() {
-                                @Override
-                                public void onFailure(@NonNull Exception e) {
-                                    Toast.makeText(TelaEdicaoAdicao.this, "Falha em salvar imagem no banco", Toast.LENGTH_SHORT).show();
-                                }
-                            });
-                            /*Cursor cursor = getContentResolver().query(selectedImage, filePathColumn, null, null, null);
-                            if (cursor != null) {
+                        // Mostra a imagem imediatamente
+                        campoPhoto.setImageURI(selectedImage);
 
-                                cursor.moveToFirst();
-                                int columnIndex = cursor.getColumnIndex(filePathColumn[0]);
-                                String picturePath = cursor.getString(columnIndex);
-
-                                photo.setImageBitmap(BitmapFactory.decodeFile(picturePath));
-                                photo.setRotation(getCameraPhotoOrientation(picturePath));
-
-                                imageUri = data.getData();
-
-                                storageReference.putFile(imageUri).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
-                                    @Override
-                                    public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                                        Toast.makeText(UserProfileActivity.this, "Image salva no banco com sucesso", Toast.LENGTH_SHORT).show();
-                                    }
-                                }).addOnFailureListener(new OnFailureListener() {
-                                    @Override
-                                    public void onFailure(@NonNull Exception e) {
-                                        Toast.makeText(UserProfileActivity.this, "Falha em salvar imagem no banco", Toast.LENGTH_SHORT).show();
-                                    }
+                        // Faz upload
+                        uploadService.uploadImage(selectedImage, new ImageUploadService.UploadCallback() {
+                            @Override
+                            public void onSuccess(String imageUrl) {
+                                runOnUiThread(() -> {
+                                    Toast.makeText(TelaEdicaoAdicao.this, "Imagem da galeria salva!", Toast.LENGTH_SHORT).show();
+                                    salvarUrlImagemNoFirestore(imageUrl);
                                 });
+                            }
 
-                                cursor.close();
-                            }*/
-                        }
+                            @Override
+                            public void onError(String error) {
+                                runOnUiThread(() -> {
+                                    Toast.makeText(TelaEdicaoAdicao.this, "Erro: " + error, Toast.LENGTH_LONG).show();
+                                });
+                            }
+                        });
                     }
                     break;
             }
         }
+    }
+
+    private void salvarUrlImagemNoFirestore(String imageUrl) {
+        HashMap<String, Object> updates = new HashMap<>();
+        updates.put("imagemUri", imageUrl); // SALVA A URL DO IMGBB
+
+        DAOItensDeFeiraModel dao = new DAOItensDeFeiraModel(userId);
+
+        dao.update(key, updates).addOnSuccessListener(suc -> {
+            Log.d("Firestore", "URL da imagem salva no Firestore: " + imageUrl);
+            // Opcional: recarregar a lista se necessário
+        }).addOnFailureListener(er -> {
+            Log.e("Firestore", "Erro ao salvar URL: " + er.getMessage());
+        });
     }
 
     public static int getCameraPhotoOrientation(String imagePath) {

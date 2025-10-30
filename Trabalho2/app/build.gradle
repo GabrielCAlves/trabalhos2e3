@@ -48,7 +48,7 @@ dependencies {
 
     implementation 'androidx.test:core:1.5.0'
 
-    // Firebase BOM - Use apenas esta abordagem
+    // Firebase BOM
     implementation platform('com.google.firebase:firebase-bom:32.6.0')
     implementation 'com.google.firebase:firebase-analytics'
     implementation 'com.google.firebase:firebase-firestore'
@@ -68,5 +68,9 @@ dependencies {
     implementation 'com.squareup:android-times-square:1.7.11@aar'
     implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.1.0"
 
-    // Remova as dependências duplicadas/comentadas
+    // APENAS ESTAS para o ImgBB (SÃO SUFICIENTES):
+    implementation 'com.squareup.okhttp3:okhttp:4.11.0'
+    implementation 'com.squareup.picasso:picasso:2.71828' // ADICIONE ESTA LINHA
+
+    // REMOVA todas as dependências do Supabase que causaram os warnings
 }

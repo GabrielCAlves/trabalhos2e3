@@ -12,6 +12,7 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
 import android.media.ExifInterface;
 import android.net.Uri;
@@ -34,6 +35,7 @@ import androidx.core.graphics.drawable.RoundedBitmapDrawable;
 import androidx.core.graphics.drawable.RoundedBitmapDrawableFactory;
 
 import br.ufc.quixada.dadm.trabalho2.databinding.ActivityUserProfileBinding;
+import br.ufc.quixada.dadm.trabalho2.service.ImageUploadService;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
@@ -49,6 +51,7 @@ import com.google.firebase.storage.FileDownloadTask;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
+import com.squareup.picasso.Picasso;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -70,6 +73,10 @@ public class UserProfileActivity extends AppCompatActivity {
 
     private FirebaseFirestore db;
     private StorageReference storageReference;
+
+    private ImageUploadService uploadService;
+
+    private String profileImageUrl; // ADICIONE ESTA VARIÁVEL
 
     private String key;
 
@@ -105,12 +112,13 @@ public class UserProfileActivity extends AppCompatActivity {
         campoEmail = findViewById(R.id.editTextEmail);
         campoSenha = findViewById(R.id.editTextSenha);
 
+        uploadService = new ImageUploadService(this);
+
         getUserData();
 
     }
 
     private void getUserData(){
-
         Toast.makeText(this, "Carregando seus dados...", Toast.LENGTH_SHORT).show();
 
         key = FirebaseAuth.getInstance().getCurrentUser().getUid();
@@ -120,23 +128,26 @@ public class UserProfileActivity extends AppCompatActivity {
                     @Override
                     public void onComplete(@NonNull Task<DocumentSnapshot> task) {
                         if(task.isSuccessful()){
-
                             DocumentSnapshot documentSnapshot = task.getResult();
 
                             if(documentSnapshot != null && documentSnapshot.exists()){
+                                // NOVO: Obter URL da imagem se existir
+                                String profileImageUrl = documentSnapshot.getString("profileImageUrl");
+
                                 nome = documentSnapshot.getString("nome");
                                 email = documentSnapshot.getString("email");
                                 senha = documentSnapshot.getString("senha");
 
-                                campoNomeProfile.setText(documentSnapshot.getString("nome"));
-                                campoNome.setText(documentSnapshot.getString("nome"));
-                                campoEmail.setText(documentSnapshot.getString("email"));
-                                campoSenha.setText(documentSnapshot.getString("senha"));
+                                campoNomeProfile.setText(nome);
+                                campoNome.setText(nome);
+                                campoEmail.setText(email);
+                                campoSenha.setText(senha);
 
-                                try {
-                                    getUserProfile();
-                                } catch (IOException e) {
-                                    Toast.makeText(UserProfileActivity.this, "Usuário sem imagem ou com falha em carregar. No segundo caso, erro: "+e.getMessage(), Toast.LENGTH_SHORT).show();
+                                // CARREGA A IMAGEM DIRETAMENTE - REMOVA A CHAMADA DUPLICADA
+                                if (profileImageUrl != null && !profileImageUrl.isEmpty()) {
+                                    loadImageFromUrl(profileImageUrl);
+                                } else {
+                                    setDefaultProfileImage();
                                 }
                             }
                         }
@@ -145,33 +156,106 @@ public class UserProfileActivity extends AppCompatActivity {
                     @Override
                     public void onFailure(@NonNull Exception e) {
                         Toast.makeText(UserProfileActivity.this, "Erro: "+e.getMessage(), Toast.LENGTH_SHORT).show();
+                        setDefaultProfileImage(); // Define imagem padrão em caso de erro
                     }
                 });
-
     }
 
-    private void getUserProfile() throws IOException {
-        storageReference = FirebaseStorage.getInstance().getReference("Usuario/" + key + ".jpg");
+    /*private void loadUserProfileImage() {
+        // Verifica se temos uma URL de imagem salva no Firestore
+        // Primeiro, precisamos buscar o documento do usuário para obter a URL
 
-        File localFile = File.createTempFile("tempImage", "jpg");
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
 
-        storageReference.getFile(localFile).addOnSuccessListener(new OnSuccessListener<FileDownloadTask.TaskSnapshot>() {
+        db.collection("Usuario").document(userId).get()
+                .addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                        if (task.isSuccessful()) {
+                            DocumentSnapshot document = task.getResult();
+                            if (document != null && document.exists()) {
+                                // Tenta obter a URL da imagem do perfil
+                                String profileImageUrl = document.getString("profileImageUrl");
+
+                                if (profileImageUrl != null && !profileImageUrl.isEmpty()) {
+                                    // Carrega a imagem da URL usando Picasso
+                                    loadImageFromUrl(profileImageUrl);
+                                } else {
+                                    // Se não há URL, usa imagem padrão
+                                    setDefaultProfileImage();
+                                    Log.d("UserProfile", "Usuário não tem imagem de perfil salva");
+                                }
+                            } else {
+                                setDefaultProfileImage();
+                            }
+                        } else {
+                            setDefaultProfileImage();
+                            Log.e("UserProfile", "Erro ao buscar dados do usuário: " + task.getException());
+                        }
+                    }
+                });
+    }*/
+
+    private void loadImageFromUrl(String imageUrl) {
+        if (imageUrl != null && !imageUrl.isEmpty()) {
+            Picasso.get()
+                    .load(imageUrl)
+                    .placeholder(R.drawable.ic_img_profile)
+                    .error(R.drawable.ic_img_profile)
+                    .into(photo, new com.squareup.picasso.Callback() {
+                        @Override
+                        public void onSuccess() {
+                            // Quando a imagem carrega com sucesso, torna-a circular
+                            makeImageCircular();
+                            Log.d("UserProfile", "Imagem de perfil carregada com sucesso");
+                        }
+
+                        @Override
+                        public void onError(Exception e) {
+                            Log.e("UserProfile", "Erro ao carregar imagem: " + e.getMessage());
+                            setDefaultProfileImage();
+                        }
+                    });
+        } else {
+            setDefaultProfileImage();
+        }
+    }
+
+    private void makeImageCircular() {
+        // Espera a imagem ser carregada e então a torna circular
+        photo.post(new Runnable() {
             @Override
-            public void onSuccess(FileDownloadTask.TaskSnapshot taskSnapshot) {
-                Bitmap bitmap = BitmapFactory.decodeFile(localFile.getAbsolutePath());
-
-                RoundedBitmapDrawable roundedDrawable = RoundedBitmapDrawableFactory.create(getResources(), bitmap);
-                roundedDrawable.setCircular(true);
-                photo.setImageDrawable(roundedDrawable);
-                photo.setRotation(getCameraPhotoOrientation(localFile.getAbsolutePath()));
-            }
-        }).addOnFailureListener(new OnFailureListener() {
-            @Override
-            public void onFailure(@NonNull Exception e) {
-                // Define uma imagem padrão quando não há foto
-                Log.d("PerfilFragment", "Usuário sem foto de perfil: " + e.getMessage());
+            public void run() {
+                try {
+                    BitmapDrawable drawable = (BitmapDrawable) photo.getDrawable();
+                    if (drawable != null) {
+                        Bitmap bitmap = drawable.getBitmap();
+                        if (bitmap != null) {
+                            RoundedBitmapDrawable roundedDrawable = RoundedBitmapDrawableFactory.create(getResources(), bitmap);
+                            roundedDrawable.setCircular(true);
+                            roundedDrawable.setAntiAlias(true);
+                            photo.setImageDrawable(roundedDrawable);
+                        }
+                    }
+                } catch (Exception e) {
+                    Log.e("UserProfile", "Erro ao tornar imagem circular: " + e.getMessage());
+                }
             }
         });
+    }
+
+    private void setDefaultProfileImage() {
+        // Define uma imagem padrão circular
+        try {
+            Bitmap defaultBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.ic_img_profile);
+            RoundedBitmapDrawable circularDrawable = RoundedBitmapDrawableFactory.create(getResources(), defaultBitmap);
+            circularDrawable.setCircular(true);
+            circularDrawable.setAntiAlias(true);
+            photo.setImageDrawable(circularDrawable);
+        } catch (Exception e) {
+            Log.e("UserProfile", "Erro ao definir imagem padrão: " + e.getMessage());
+            photo.setImageResource(R.drawable.ic_img_profile);
+        }
     }
 
     @Override
@@ -270,102 +354,96 @@ public class UserProfileActivity extends AppCompatActivity {
         builder.show();
     }
 
+    // ATUALIZE O onActivityResult PARA SALVAR A URL:
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        storageReference = FirebaseStorage.getInstance().getReference("Usuario/"+key+".jpg");
-
-        Log.d(String.valueOf(UserProfileActivity.this), "Data: "+data.getData());
-
         if (resultCode != RESULT_CANCELED) {
             switch (requestCode) {
-                case 0:
+                case 0: // Câmera
                     if (resultCode == RESULT_OK && data != null) {
                         Bitmap selectedImage = (Bitmap) data.getExtras().get("data");
 
-                        Matrix mat = new Matrix();
-                        mat.postRotate(0);
+                        // Mostra a imagem imediatamente
+                        photo.setImageBitmap(selectedImage);
 
-                        Bitmap selectedImageRotate = Bitmap.createBitmap(selectedImage, 0, 0,selectedImage.getWidth(),selectedImage.getHeight(), mat, true);
+                        // Gera um nome único para o arquivo
+                        String fileName = "profile_" + key + "_" + System.currentTimeMillis() + ".jpg";
 
-                        photo.setImageBitmap(selectedImageRotate);
-
-                        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-                        selectedImage.compress(Bitmap.CompressFormat.JPEG, 90, bytes);
-                        byte bb[] = bytes.toByteArray();
-
-                        storageReference.putBytes(bb).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                        uploadService.uploadImage(selectedImage, new ImageUploadService.UploadCallback() {
                             @Override
-                            public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                                Toast.makeText(UserProfileActivity.this, "Imagem de perfil salva com sucesso", Toast.LENGTH_SHORT).show();
+                            public void onSuccess(String imageUrl) {
+                                runOnUiThread(() -> {
+                                    Toast.makeText(UserProfileActivity.this, "Foto de perfil salva!", Toast.LENGTH_SHORT).show();
+                                    // SALVA A URL NO FIRESTORE E ATUALIZA A IMAGEM
+                                    saveProfileImageUrl(imageUrl);
+                                });
                             }
-                        }).addOnFailureListener(new OnFailureListener() {
+
                             @Override
-                            public void onFailure(@NonNull Exception e) {
-                                Toast.makeText(UserProfileActivity.this, "Erro: "+e.getMessage(), Toast.LENGTH_LONG).show();
+                            public void onError(String error) {
+                                runOnUiThread(() -> {
+                                    Toast.makeText(UserProfileActivity.this, "Erro: " + error, Toast.LENGTH_LONG).show();
+                                    setDefaultProfileImage(); // Volta para imagem padrão em caso de erro
+                                });
                             }
                         });
                     }
                     break;
-                case 1:
+
+                case 1: // Galeria
                     if (resultCode == RESULT_OK && data != null) {
                         Uri selectedImage = data.getData();
-                        //String[] filePathColumn = {MediaStore.Images.Media.DATA};
-                        if (selectedImage != null) {
-                            InputStream inputStream = null;
-                            try {
-                                inputStream = getContentResolver().openInputStream(selectedImage);
-                            } catch (FileNotFoundException e) {
-                                throw new RuntimeException(e);
-                            }
-                            Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
-                            photo.setImageBitmap(bitmap);
-                            photo.setRotation(getCameraPhotoOrientation(String.valueOf(selectedImage)));
-                            imageUri = data.getData();
 
-                            storageReference.putFile(imageUri).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
-                                @Override
-                                public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                                    Toast.makeText(UserProfileActivity.this, "Image salva no banco com sucesso", Toast.LENGTH_SHORT).show();
-                                }
-                            }).addOnFailureListener(new OnFailureListener() {
-                                @Override
-                                public void onFailure(@NonNull Exception e) {
-                                    Toast.makeText(UserProfileActivity.this, "Falha em salvar imagem no banco", Toast.LENGTH_SHORT).show();
-                                }
-                            });
-                            /*Cursor cursor = getContentResolver().query(selectedImage, filePathColumn, null, null, null);
-                            if (cursor != null) {
+                        // Mostra a imagem imediatamente
+                        photo.setImageURI(selectedImage);
 
-                                cursor.moveToFirst();
-                                int columnIndex = cursor.getColumnIndex(filePathColumn[0]);
-                                String picturePath = cursor.getString(columnIndex);
+                        // Gera um nome único para o arquivo
+                        String fileName = "profile_" + key + "_" + System.currentTimeMillis() + ".jpg";
 
-                                photo.setImageBitmap(BitmapFactory.decodeFile(picturePath));
-                                photo.setRotation(getCameraPhotoOrientation(picturePath));
-
-                                imageUri = data.getData();
-
-                                storageReference.putFile(imageUri).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
-                                    @Override
-                                    public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                                        Toast.makeText(UserProfileActivity.this, "Image salva no banco com sucesso", Toast.LENGTH_SHORT).show();
-                                    }
-                                }).addOnFailureListener(new OnFailureListener() {
-                                    @Override
-                                    public void onFailure(@NonNull Exception e) {
-                                        Toast.makeText(UserProfileActivity.this, "Falha em salvar imagem no banco", Toast.LENGTH_SHORT).show();
-                                    }
+                        uploadService.uploadImage(selectedImage, new ImageUploadService.UploadCallback() {
+                            @Override
+                            public void onSuccess(String imageUrl) {
+                                runOnUiThread(() -> {
+                                    Toast.makeText(UserProfileActivity.this, "Foto de perfil salva!", Toast.LENGTH_SHORT).show();
+                                    // SALVA A URL NO FIRESTORE E ATUALIZA A IMAGEM
+                                    saveProfileImageUrl(imageUrl);
                                 });
+                            }
 
-                                cursor.close();
-                            }*/
-                        }
+                            @Override
+                            public void onError(String error) {
+                                runOnUiThread(() -> {
+                                    Toast.makeText(UserProfileActivity.this, "Erro: " + error, Toast.LENGTH_LONG).show();
+                                    setDefaultProfileImage(); // Volta para imagem padrão em caso de erro
+                                });
+                            }
+                        });
                     }
                     break;
             }
         }
+    }
+
+    // ADICIONE ESTE MÉTODO PARA SALVAR A URL NO FIRESTORE:
+    private void saveProfileImageUrl(String imageUrl) {
+        db.collection("Usuario").document(key)
+                .update("profileImageUrl", imageUrl)
+                .addOnCompleteListener(new OnCompleteListener<Void>() {
+                    @Override
+                    public void onComplete(@NonNull Task<Void> task) {
+                        if (task.isSuccessful()) {
+                            Log.d("UserProfile", "URL da imagem salva no Firestore: " + imageUrl);
+                            // Atualiza a variável local e recarrega a imagem
+                            profileImageUrl = imageUrl;
+                            loadImageFromUrl(imageUrl);
+                        } else {
+                            Log.e("UserProfile", "Erro ao salvar URL: " + task.getException());
+                            Toast.makeText(UserProfileActivity.this, "Erro ao salvar URL da imagem", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
     }
 
     public static int getCameraPhotoOrientation(String imagePath) {

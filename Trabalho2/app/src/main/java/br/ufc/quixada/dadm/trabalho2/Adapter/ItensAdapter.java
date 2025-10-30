@@ -2,25 +2,18 @@ package br.ufc.quixada.dadm.trabalho2.Adapter;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.net.Uri;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.firebase.storage.FirebaseStorage;
-import com.google.firebase.storage.StorageReference;
+import com.squareup.picasso.Picasso;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,13 +25,9 @@ public class ItensAdapter extends RecyclerView.Adapter<ItensAdapter.ViewHolder> 
     static List<ItensDeFeiraModel> listItens = new ArrayList<>();
     private static OnItemClickListener itemClickListener;
     private Context context;
-    private FirebaseStorage storage;
-
-    private String key;
 
     public ItensAdapter(Context context) {
         this.context = context;
-        this.storage = FirebaseStorage.getInstance();
     }
 
     public void setItems(List<ItensDeFeiraModel> list) {
@@ -69,26 +58,20 @@ public class ItensAdapter extends RecyclerView.Adapter<ItensAdapter.ViewHolder> 
         holder.tvPreco.setText(String.format("%.2f", item.getPreco()));
         holder.tvDesconto.setText(String.format("%.2f", item.getDesconto()));
 
-        // Carrega a imagem exatamente como em TelaEdicaoAdicao
-        if (item.getKey() != null && !item.getKey().isEmpty()) {
-            try {
-                StorageReference storageRef = storage.getReference("Item/"+item.getUserId()+"/"+item.getKey()+".jpg");
-                File localFile = File.createTempFile("tempImage", "jpg");
+        // CARREGA A IMAGEM DO IMGBB (URL)
+        if (item.getImagemUri() != null && !item.getImagemUri().isEmpty()) {
+            // Usa Picasso para carregar a imagem da URL do ImgBB
+            Picasso.get()
+                    .load(item.getImagemUri())
+                    .placeholder(R.drawable.ic_img_profile) // Imagem enquanto carrega
+                    .error(R.drawable.ic_img_profile) // Imagem se der erro
+                    .resize(120, 120) // Redimensiona para otimização
+                    .centerCrop()
+                    .into(holder.ivImagem);
 
-                storageRef.getFile(localFile)
-                        .addOnSuccessListener(taskSnapshot -> {
-                            Bitmap bitmap = BitmapFactory.decodeFile(localFile.getAbsolutePath());
-                            holder.ivImagem.setImageBitmap(bitmap);
-                        })
-                        .addOnFailureListener(e -> {
-                            Log.e("FirebaseStorage", "Erro ao carregar imagem: " + e.getMessage());
-                            holder.ivImagem.setImageResource(R.drawable.ic_img_profile);
-                        });
-            } catch (IOException e) {
-                e.printStackTrace();
-                holder.ivImagem.setImageResource(R.drawable.ic_img_profile);
-            }
+            Log.d("ItensAdapter", "Carregando imagem: " + item.getImagemUri());
         } else {
+            // Se não há imagem, usa a padrão
             holder.ivImagem.setImageResource(R.drawable.ic_img_profile);
         }
 
@@ -112,7 +95,7 @@ public class ItensAdapter extends RecyclerView.Adapter<ItensAdapter.ViewHolder> 
     }
 
     public void setOnItemClickListener(OnItemClickListener listener) {
-        this.itemClickListener = (OnItemClickListener) listener;
+        this.itemClickListener = listener;
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
